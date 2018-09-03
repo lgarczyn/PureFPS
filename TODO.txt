@@ -1,0 +1,276 @@
+bugs
+	can't fire while moving
+
+projectile
+	movement
+		stationary
+			snap
+			hover
+	trajectory
+		sweeping
+		spin - reimplement
+	damage
+		figure out
+			buildup damage//how many hits before damage is applied? how much damage?
+			stack damage//
+				all require effect identity?
+
+		implement
+			slow effect//speed damage?
+			blind effect//vision damage?
+			headshot
+			IAffectable Affectable AffectableWeakpoint
+			emp
+				increase next frame time?
+			radar
+				effect or AOE ?
+				gradient ?
+			damage
+			rof reduction
+			knockback can deflect projectile
+				depends on size and velocity
+				locked on can still dodge
+			events
+				if eternal
+					create this
+				else
+					create parent
+	cosmetic
+		color-at-start
+		color-at-end
+		particles on fire
+		particles on contact
+		fire sound
+		contact sound
+	
+	behaviour
+		trigger
+		discard
+			discarding element discards children
+			element can die and not be discarded
+		
+	sentry?
+		sticking/hovering bullet with automatic subweapon
+	chain-lightning?
+
+
+sniper missing zoom
+shotgun v
+machine gun v
+flamethrower d
+knife not great but yes
+chainsaw same
+axe worse
+shield d
+missile launcher v
+mines d
+shield thrower v
+reinhardt missile v
+attracting missile v
+constant healing factor v
+
+to theorize
+	difference between weapon and subweapon
+	weapon has recoil - subweapon could use some?
+	subweapon has autoaim - could definitely work
+		but what about angle limitation
+			could work, but only if turret has real orientation
+	subweapon fires automatically
+		simple bool
+	trajectory display
+		can be expensive
+		by default on turret deploy
+	self
+		speed modifier
+		sight modifier
+		heal / regen
+		timer
+	movements
+		just because they can't be modelized with effects and projectile
+			it doesn't mean they can't be modelized
+		teleportation
+			projectile
+		dash
+			???
+		jump
+			self knockback?
+	
+	shields
+		knockback always on center of mass
+		no freeze or blindness?
+		
+	maps
+		tunnels
+		every single doom maps?
+		load any heightmap?
+		2d?
+	structure
+		weapon
+			shot
+			resource
+			recoil
+			projectile
+				trajectory
+				effect
+					explosion
+				subweapon
+					aim
+					shot
+					resource
+					projectile
+
+		weapon
+			shot - type
+				* self - applies effect
+				* explosion - applies effect in range
+				* gun - sends projectile to apply effect
+			
+			effect
+			
+			explosion (if type explosion)?
+				duration
+				range
+			
+			projectile (if type gun)
+				subweapon
+					type
+						* self - does nothing
+						* explosion - applies effect in range
+						* gun - sends projectile to apply effect
+						
+					effect
+					projectile
+	projectile lifespan
+		touch missile
+			starts on fire
+			dies on timeout
+
+		turret
+			start on timeout
+			ends on
+				activation time ?
+				ammunition
+				concurent turrets
+
+		shield
+			starts on fire
+			dies on timeout
+			
+		splitter
+			starts on timeout
+			ends on timeout
+
+		multi-splitter
+			starts on timeout
+			prolongates timeout?
+
+			
+		possible solutions
+			timeout for everything
+				+ simple
+				- anything triggered on timeout can only work once
+					no duration AOE or turrets
+					
+			duration for explosion, turrets and contact
+				+ fits with explosion durations
+				
+				-+ projectile can continue beyond effect
+					wave of fire becomes boring proj
+					
+				- effect can continue beyond projectile
+					fire remains stuck to wall after shot
+				
+				- turret spawned at timeout is always stationary
+				
+				- turret spawned at trigger can be stationary
+				
+				fixing
+					* some way to bind the death of the projectile
+						and the end of the effect
+		
+		
+goals
+	artillery fight
+		spotter/marker and shooter team
+		coordinates
+	cards become more powerful, allowing closer and closer customization
+
+	Killing someone gives you lvls
+	Getting a lvl gives everyone else upgrade points for their weapons
+	lvls somehow help getting to boss?
+
+controller
+	fix jump
+	add physics (knockback)
+	
+aesthetics
+	speed of sound
+	//https://stevencraeynest.wordpress.com/2013/03/29/easy-volumetric-explosion-in-unity3d/
+	shockwave using normal
+	custom line renderer
+		affected by wind
+		disapears from the middle
+		better bounces
+	explosion size
+		sphereoverlap
+		score using distance and size
+		scale with score (sqrt likely)
+		delete redundant explosions
+			small, surrounded, close to others
+		fuse two explosions with clear line of sight?
+		volumetric explosion
+			https://docs.unity3d.com/510/Documentation/Manual/DirectX11.html
+movement
+	flight
+	surf
+	jump
+	bike
+	dash
+	teleportation
+
+
+pure fps
+	weapons
+		examples
+			flamethrower
+				mid range
+				low precision
+				high rof
+				high ammunition
+				proj
+					slow proj
+					non-consumed
+					damage by time in contact
+			knife
+				inf ammunition
+				low range
+				high damage
+				mid rof
+				no headshots
+			
+			sniper
+				low ammunition
+				high recoil
+				low rof
+				proj
+					high damage
+					high range
+					headshots
+					instant hit
+			shield
+				close range
+				short life
+				mid rof
+				0 speed
+				0 damage
+				non-consumed
+				big hitbox
+			
+			mines
+				close range
+				long life
+				low rof
+				0 speed
+				explosion
+				large hitbox
+				knockback
