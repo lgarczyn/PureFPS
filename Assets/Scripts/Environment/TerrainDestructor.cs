@@ -11,14 +11,12 @@ public class TerrainDestructor : Singleton<TerrainDestructor> {
     public AnimationCurve terrainCurve;
     public AnimationCurve colorCurve;
     public float colorMultiplier = 1f;
-    public float rangeMultiplier = 1f;
 
     private void Start()
     {
         var data = GetComponent<Terrain>().terrainData;
         normalHeights = data.GetHeights(0, 0, data.heightmapResolution, data.heightmapResolution);
         normalAlphas = data.GetAlphamaps(0, 0, data.alphamapResolution, data.alphamapResolution);
-        DestroyTerrain(new Vector3(-67, -1212, -127), 10f, 1f, 1f);
     }
 
     public void DestroyTerrain(Vector3 pos, float range, float delay, float depthMultiplier = 0.3f)
@@ -28,25 +26,35 @@ public class TerrainDestructor : Singleton<TerrainDestructor> {
 
     private IEnumerator DestroyCoroutine(Vector3 pos, float range, float delay, float depthMultiplier, float colorMultiplier)
     {
+        if (range < 0.2f)
+            yield break;
+        if (range < 1.5f)
+        {
+            depthMultiplier = 0f;
+            colorMultiplier *= (range / 1.5f);
+            range = 1.5f;
+        }
+
         yield return new WaitForSeconds(delay);
+
+
 
         Terrain terrain = GetComponent<Terrain>();
         var data = terrain.terrainData;
-        int res = data.heightmapResolution;
 
+        // Getting explosion position inside terrain space
         pos = transform.InverseTransformPoint(pos);
 
+        int res = data.heightmapResolution;
         pos.x = pos.x * res / data.bounds.max.x;
         pos.y = pos.y / data.heightmapScale.y;
         pos.z = pos.z * res / data.bounds.max.z;
 
-        float rrange = Mathf.Max(range, range * rangeMultiplier);
+        int minX = Mathf.Max(Mathf.RoundToInt(pos.x - range), 0);
+        int minZ = Mathf.Max(Mathf.RoundToInt(pos.z - range), 0);
 
-        int minX = Mathf.Max(Mathf.RoundToInt(pos.x - rrange), 0);
-        int minZ = Mathf.Max(Mathf.RoundToInt(pos.z - rrange), 0);
-
-        int maxX = Mathf.Min(Mathf.RoundToInt(pos.x + rrange), res - 2);
-        int maxZ = Mathf.Min(Mathf.RoundToInt(pos.z + rrange), res - 2);
+        int maxX = Mathf.Min(Mathf.RoundToInt(pos.x + range), res - 1);
+        int maxZ = Mathf.Min(Mathf.RoundToInt(pos.z + range), res - 1);
 
         int lenX = maxX - minX;
         int lenZ = maxZ - minZ;
@@ -59,53 +67,53 @@ public class TerrainDestructor : Singleton<TerrainDestructor> {
         var heights = data.GetHeights(minX, minZ, lenX, lenZ);
         var alphas = data.GetAlphamaps(minX, minZ, lenX, lenZ);
 
+        if (lenX > alphas.GetLength(1) || lenZ > alphas.GetLength(0))
+        {
+            Debug.LogWarning("OUT OF BOUND EXPLOSION");
+            yield break;
+        }
+
         for (int z = 0; z < lenZ; z++)//TODO check damn optimized order
             for (int x = 0; x < lenX; x++)
             {
-                float posX = x + minX - pos.x;
-                float posZ = z + minZ - pos.z;
+                Vector2 p = new Vector2(x - range, z - range);
 
-                float height = Mathf.Sqrt((range * range) - (posX * posX) - (posZ * posZ));
+                //Get the height (of a sphere centered on explosion) at location
+                float height = Mathf.Sqrt((range * range) - p.sqrMagnitude);
 
-                if (height > 0)
-                {
-                    float expSize = height / data.heightmapScale.y * depthMultiplier * terrainCurve.Evaluate(height / range);
-                    float expHeight = pos.y;
-                    float currentHeight = heights[z, x];
+                //If out of range, bail
+                if (float.IsNaN(height))
+                    continue;
 
-                    if (currentHeight > expHeight + expSize)
-                        heights[z, x] = currentHeight - expSize * 2 * 0.8f;
-                    else if (currentHeight > expHeight - expSize)
-                        heights[z, x] = Mathf.Lerp(heights[z, x], expHeight - expSize, 0.8f);
-                }
-                if (x < alphas.GetLength(1) && z < alphas.GetLength(0))
-                {
-                    height = Mathf.Sqrt((range * range * rangeMultiplier * rangeMultiplier) - (posX * posX) - (posZ * posZ));
+                //Get explosion size and height at point
+                float expSize = height / data.heightmapScale.y * depthMultiplier * terrainCurve.Evaluate(height / range);
+                float currentHeight = heights[z, x];
 
-                    if (float.IsNaN(height))
-                        continue;
+                if (currentHeight > pos.y + expSize)
+                    heights[z, x] = currentHeight - expSize * 2 * 0.8f;
+                else if (currentHeight > pos.y - expSize)
+                    heights[z, x] = Mathf.Lerp(currentHeight, pos.y - expSize, 0.8f);
+                else
+                    continue;
+                //Update colors
+                float ratio = height / range;
 
-                    float ratio = height / (range * rangeMultiplier);
+                if (ratio > 1f)
+                    continue;
+                if (ratio < 0f)
+                    continue;
+                ratio = colorCurve.Evaluate(ratio) * colorMultiplier;
 
-                    if (ratio > 1f)
-                        continue;
-                    if (ratio < 0f)
-                        continue;
-                    ratio = colorCurve.Evaluate(ratio) * colorMultiplier;
+                alphas[z, x, 0] *= Mathf.Max(1 - ratio, 0f);
+                alphas[z, x, 1] *= Mathf.Max(1 - ratio, 0f);
+                alphas[z, x, 2] *= Mathf.Max(1 - ratio, 0f);
+                alphas[z, x, 3] *= Mathf.Max(1 - ratio, 0f);
 
-                    alphas[z, x, 0] *= Mathf.Max(1 - ratio, 0f);
-                    alphas[z, x, 1] *= Mathf.Max(1 - ratio, 0f);
-                    alphas[z, x, 2] *= Mathf.Max(1 - ratio, 0f);
-                    alphas[z, x, 3] *= Mathf.Max(1 - ratio, 0f);
-
-                    alphas[z, x, 3] += ratio;
-                }
+                alphas[z, x, 3] += ratio;
             }
 
         data.SetHeights(minX, minZ, heights);
         data.SetAlphamaps(minX, minZ, alphas);
-
-        terrain.terrainData = data;
     }
 
     private void OnDestroy()

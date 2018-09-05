@@ -52,12 +52,12 @@ namespace Data
         public WeaponType type;//Is the projectile a shield, an AOE effect, a turret or a contact thing
         public ActivationData activation;//When does the subweapon start acting
         public EffectData effect;
-        public AimData aim;
 
         public ShieldData shield;//Ignored unless type == shield
 
         public ExplosionData explosion;//Ignored unless type == explosion
 
+        public AimData aim;
         public ShotData shot;
         public ProjectileData projectile;
 
@@ -127,11 +127,11 @@ namespace Data
     [System.Serializable]
     public struct ShotData
     {
-        [Range(0, 100)]
+        [Range(1, 100)]
         public int count;//number of projectiles, strong cost multiplier
         [Range(0f, 360f)]
         public float cone;//angle of firing cone
-        [Range(0f, 60f)]
+        [Range(0f, 1000f)]
         public float velocity;//muzzle velocity
         [Range(0f, 1f)]
         public float inheritedVelocity;//Percent of player velocity added to muzzle velocity

@@ -85,7 +85,6 @@ public class SubWeapon : MultiUpdateObject, IWeapon {
     Wait Setup() {
 
         //TODO calculate death time
-        Debug.Log("setting up subweapon");
         //TODO
         switch (data.type) {
             case WeaponType.Contact: break;//Start checking for contact in range=size, stop on timeout
@@ -106,7 +105,7 @@ public class SubWeapon : MultiUpdateObject, IWeapon {
         Vector3 gravity = data.projectile.trajectory.gravity * Physics.gravity;
         Vector3 position = PhysicsTools.GetPosition(prevPosition, prevVelocity, gravity, timeSinceLastFrame);
         
-        ExplosionManager.instance.GetItem(position);
+        ExplosionManager.instance.GetItem(position, data.explosion.range);
     }
 
     void FireAt(Quaternion direction, float speed)

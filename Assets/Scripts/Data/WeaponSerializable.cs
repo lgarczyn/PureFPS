@@ -100,8 +100,6 @@ public class WeaponDataDrawer : PropertyDrawer
         return position;
     }
 
-    
-
     public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
     {
         EditorGUI.BeginProperty(position, null, property);
@@ -155,6 +153,82 @@ public class WeaponDataDrawer : PropertyDrawer
             break;
             case WeaponType.Shield: 
             height += EditorGUI.GetPropertyHeight(property.FindPropertyRelative("shield"));
+            break;
+            
+        }
+        height += EditorGUI.GetPropertyHeight(property.FindPropertyRelative("resource"));
+        return height;
+    }
+}
+
+
+
+[CustomPropertyDrawer(typeof(SubWeaponData))]
+public class SubWeaponDataDrawer : PropertyDrawer
+{
+    Rect DispChildProperty(Rect position, SerializedProperty property, string name)
+    {
+        var childProperty = property.FindPropertyRelative(name);
+        EditorGUI.PropertyField(position, childProperty, true);
+        position.y += EditorGUI.GetPropertyHeight(childProperty);
+        return position;
+    }
+
+    public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
+    {
+        EditorGUI.BeginProperty(position, null, property);
+        //serializedObject.Update();
+
+        position = DispChildProperty(position, property, "type");
+        position = DispChildProperty(position, property, "activation");
+        position = DispChildProperty(position, property, "effect");
+
+        switch ((WeaponType)property.FindPropertyRelative("type").enumValueIndex) {
+            case WeaponType.Contact: 
+            break;
+            case WeaponType.Explosion: 
+                position = DispChildProperty(position, property, "explosion");
+            break;
+            case WeaponType.Gun: 
+                position = DispChildProperty(position, property, "aim");
+                position = DispChildProperty(position, property, "shot");
+                position = DispChildProperty(position, property, "recoil");
+                position = DispChildProperty(position, property, "projectile");
+            break;
+            case WeaponType.Shield: 
+                position = DispChildProperty(position, property, "shield");
+            break;
+            
+        }
+        position = DispChildProperty(position, property, "resource");
+
+        //property.ApplRelativeyModifiedProperties();
+        
+        EditorGUI.EndProperty();
+    }
+
+    public override float GetPropertyHeight(SerializedProperty property, GUIContent label)
+    {
+        var height = 0f;
+
+        height += EditorGUI.GetPropertyHeight(property.FindPropertyRelative("type"));
+        height += EditorGUI.GetPropertyHeight(property.FindPropertyRelative("activation"));
+        height += EditorGUI.GetPropertyHeight(property.FindPropertyRelative("effect"));
+
+        switch ((WeaponType)property.FindPropertyRelative("type").enumValueIndex) {
+            case WeaponType.Contact: 
+            break;
+            case WeaponType.Explosion: 
+                height += EditorGUI.GetPropertyHeight(property.FindPropertyRelative("explosion"));
+            break;
+            case WeaponType.Gun: 
+                height += EditorGUI.GetPropertyHeight(property.FindPropertyRelative("aim"));
+                height += EditorGUI.GetPropertyHeight(property.FindPropertyRelative("shot"));
+                height += EditorGUI.GetPropertyHeight(property.FindPropertyRelative("recoil"));
+                height += EditorGUI.GetPropertyHeight(property.FindPropertyRelative("projectile"));
+            break;
+            case WeaponType.Shield: 
+                height += EditorGUI.GetPropertyHeight(property.FindPropertyRelative("shield"));
             break;
             
         }
