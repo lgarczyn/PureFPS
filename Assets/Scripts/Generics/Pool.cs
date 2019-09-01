@@ -4,16 +4,15 @@ using UnityEngine;
 
 public interface IPool
 {
-    GameObject GetItem(Transform parent, Vector3 position);
     void ReturnItem(GameObject item);
     void ReturnItem(GameObject item, float time);
     void Reserve(uint amount);
 }
 
 //The argument to pool has to inherit from pool. Recursion FTW
-public class Pool<T>: Singleton<T>, IPool where T:Pool<T>
+public class Pool<T> : Singleton<T>, IPool where T : Pool<T>
 {
-    Stack<GameObject>items = new Stack<GameObject>();
+    Stack<GameObject> items = new Stack<GameObject>();
 
     public GameObject item;
     public uint initializationCount;
@@ -26,7 +25,7 @@ public class Pool<T>: Singleton<T>, IPool where T:Pool<T>
 
     public void Reserve(uint amount)
     {
-        for (int i = 0; i < initializationCount; i++)
+        for (int i = 0; i < amount; i++)
             ReturnItem(CreateItem());
     }
 
@@ -41,7 +40,7 @@ public class Pool<T>: Singleton<T>, IPool where T:Pool<T>
 
     protected virtual void InitItem(GameObject item) { }
 
-    public virtual GameObject GetItem(Transform parent, Vector3 position)
+    protected virtual GameObject GetItem(Transform parent, Vector3 position)
     {
         GameObject instance;
         if (items.Count > 0)
@@ -56,10 +55,10 @@ public class Pool<T>: Singleton<T>, IPool where T:Pool<T>
 
         instance.SetActive(true);
         instance.transform.SetParent(parent);
-        instance.transform.position = position;
+        instance.transform.localPosition = position;
 
-        AudioSource source = instance.GetComponent<AudioSource>();
-        if (source) { source.enabled = true; source.Play(); }
+        //AudioSource source = instance.GetComponent<AudioSource>();
+        //if (source) { source.enabled = true; source.Play(); }
 
         return instance;
     }

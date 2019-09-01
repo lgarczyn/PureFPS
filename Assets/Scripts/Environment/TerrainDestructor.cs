@@ -2,7 +2,8 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class TerrainDestructor : Singleton<TerrainDestructor> {
+public class TerrainDestructor : Singleton<TerrainDestructor>
+{
 
 
     float[,] normalHeights;
@@ -73,7 +74,7 @@ public class TerrainDestructor : Singleton<TerrainDestructor> {
             yield break;
         }
 
-        for (int z = 0; z < lenZ; z++)//TODO check damn optimized order
+        for (int z = 0; z < lenZ; z++)
             for (int x = 0; x < lenX; x++)
             {
                 Vector2 p = new Vector2(x - range, z - range);

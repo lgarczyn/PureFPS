@@ -1,54 +1,37 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+﻿using UnityEngine;
 
-public class MultiUpdateObject : MonoBehaviour {
+public class MultiUpdateObject : MonoBehaviour
+{
 
     protected float prevFrameTime;
-    protected float deltaTime;
-    protected float currentTime;
     protected float nextFrameTime;
+    protected float timeToNextUpdate;
+    protected float rofMultiplier;
 
-    protected float frameRatio
+    protected float currentTime
     {
         get
         {
-            if (nextFrameTime - prevFrameTime == 0f)
-                return (0f);
-            return (currentTime - prevFrameTime) / (nextFrameTime - prevFrameTime);
-        }
-    }
-
-    protected float timeToNextFrame
-    {
-        get
-        {
-            return nextFrameTime - currentTime;
-        }
-    }
-
-    protected float timeSinceLastFrame
-    {
-        get
-        {
-            return currentTime - prevFrameTime;
+            return prevFrameTime + timeToNextUpdate;
         }
     }
 
     protected void OnEnable()
     {
-        prevFrameTime = currentTime = nextFrameTime = Time.time;
-        deltaTime = 0;
+        prevFrameTime = nextFrameTime = Time.time;
+        timeToNextUpdate = 0;
+        rofMultiplier = 1f;
         RealOnEnable();
     }
 
-    //Cancel the current waiting time
-    /*protected void Abort(float abortTime)
+    protected void Reset(float time)
     {
-        deltaTime = 0;
-        enabled = false;
-    }*/
+        prevFrameTime = nextFrameTime = time;
+        timeToNextUpdate = 0;
+        rofMultiplier = 1f;
+    }
 
+    [System.Serializable]
     protected struct Wait
     {
         public enum WaitType
@@ -89,43 +72,64 @@ public class MultiUpdateObject : MonoBehaviour {
 
     }
 
-	void Update ()
+    void CallMultiUpdates()
     {
-        BeforeUpdates();
-
-        prevFrameTime = nextFrameTime;
-        nextFrameTime = Time.time;
+        float remainingTime = nextFrameTime - prevFrameTime;
+        remainingTime *= rofMultiplier;
 
         int safety = 0;
 
-        while (currentTime < nextFrameTime)
+        while (timeToNextUpdate <= remainingTime)
         {
-            Wait wait = MultiUpdate(deltaTime);
+            remainingTime -= timeToNextUpdate;
 
-            float prevTime = currentTime;
+            float frameRatio = 1f - (remainingTime) / (nextFrameTime - prevFrameTime);//?
+
+            Wait wait = MultiUpdate(timeToNextUpdate, frameRatio);
+
             switch (wait.waitingType)
             {
-                case Wait.WaitType.Frame: currentTime = nextFrameTime; break;
-                case Wait.WaitType.Time: currentTime += wait.waitingTime; break;
-                case Wait.WaitType.Ever: this.enabled = false; currentTime = float.MaxValue; break;
+                case Wait.WaitType.Frame:
+                    timeToNextUpdate = 0;
+                    return;
+                case Wait.WaitType.Ever:
+                    timeToNextUpdate = float.MaxValue;
+                    this.enabled = false;
+                    return;
+                case Wait.WaitType.Time:
+                    timeToNextUpdate = wait.waitingTime;
+                    break;
             }
-            deltaTime = currentTime - prevTime;
 
             safety++;
             if (safety > 10000)
             {
                 enabled = false;
                 Debug.LogError("Too many frames. Endless loop probable.");
-                return;
+                break;
             }
         }
+        timeToNextUpdate -= remainingTime * rofMultiplier;
+    }
 
+    void Update()
+    {
+        prevFrameTime = nextFrameTime;
+        nextFrameTime = Time.time;
+
+        BeforeUpdates();
+        CallMultiUpdates();
         AfterUpdates();
     }
 
-    protected virtual Wait MultiUpdate(float deltaTime)
+    protected virtual Wait MultiUpdate(float deltaTime, float frameRatio)
     {
         return Wait.ForFrame();
+    }
+
+    protected void SetRofMultiplier(float multiplier)
+    {
+        rofMultiplier = multiplier;
     }
 
     protected virtual void BeforeUpdates() { }

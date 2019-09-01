@@ -2,7 +2,7 @@
 using System.Collections;
 using System;
 
-public class Singleton<T>:MonoBehaviour where T:MonoBehaviour 
+public class Singleton<T> : MonoBehaviour where T : MonoBehaviour
 {
 
     void Awake()
@@ -20,5 +20,5 @@ public class Singleton<T>:MonoBehaviour where T:MonoBehaviour
 
     public static T instance;
 
-    protected virtual void AwakeSingleton(){ }
+    protected virtual void AwakeSingleton() { }
 }

@@ -1,33 +1,158 @@
+current
+	BUG
+		subweapon and projectiles don't retire
+			subweapon Wait.forever command is bad here, right?
+	TODO SIMPLE
+		implement subweapon lifetime/max number
+		implement enemy player for murder
+		create subweapon iterator and counter tools
+			once done, remove empty lists
+				is this needed ?
+	TODO COMPLEX
+		swiping projectile
+			range
+			angle 0 is vertical
+			angle and angle variation
+			math?
+			circular cast?
+				take player movement in account?
+			keep rotation away from player
+			actual TODO
+				weapon and subweapon spawning
+					position
+						should I use lifetime? it's convenient
+						lifetime/speed = distance
+						distance / range = angular lifetime?
+						angular lifetime / 2 -> angular origin
+						turn that into quaternion, and multiply by transform
+						remultiply by range
+						velocity is similar, but pi/2 off
+						where does orbit angle fit?
+						AAAAAAAAAAAARG
+				projectile behaviour
+					would kinda be easier with a damn joint
+					so basically get the next position on its own, in the same way, except with a different lifetime
+					since the logic is the same, a better
+	should a shield appear at the end of a frame?
+		any weapon should actually only fire at end of frame
+		makes sense, since they can only work for future updates
+		also makes raycasting easier, since it matches actual time
+	I can only spawn bullets at specific times
+		so either I spawn them before, or spawn them after
+		after makes a lot more sense, but they risk going through walls
+		...
+		can I use coroutines to call precisly at the right time?
+		can I?
+		probably not
+		nope
+		ideally should be called from inside the physics solver
+		but I can't do that can I?
+		...
+		so a simple raycast + spawn I guess
+			ideally should add points to the trailRenderer
+	actual TODO
+		projectile just uses rigidbody, with players shields and affectables using continuous dynamic collisions
+		projectile can activate and use a joint, and attach itself to player
+			no need for hierarchy
+			need to learn how to setup stuff
+				need to rotate the plan axis quaternion
+				need to set up original position
+		remove work from weapon and subweapons
+			precision could be handled by projectiles
+			
+		
+
 bugs
-	can't fire while moving
+	particles rotate when looked from above or underneath and the camera moves
+		use new standard particle shader
+	effect len probably doesn't happen for the first frame, and it isn't balanced next frame
+		same for effects happening in the "past"
+	sound is badly affected by rof
+		sound doesn't go as low
+		startfire isn't called again and can't update the rof
+		should audioweapon do everithing?
+	rof multiplier of 0 doesn't prevent firing last bullet
+
+effects
+	radar effect
+		shader with high priority inside mesh and behind geometry (wow)
+		one more thing that affectable will need to access to
+	movement effect
+		flying, swimming, etc
+	invisibility
+	graviy
+	non-killing poison
+	freeze
+		affect rotation ?
+
+features
+	testing bots
+		move around
+		fire at anything in front
+	multiplayer
+	menus
+	command line
+	cross-platform input
+
+optimization/refactoring
+	modify effects to avoid constant sorting/filtering
+	they are deleted and used by endtime mostly, so that should be the key
+		maybe?
+		a sorted queue of sorts would be best to avoid high-tech solutions
+
+player
+	hitbox
+	death
+	structure ?
+		bind points
+		damage zones
+	customization
+	max health
 
 projectile
 	movement
-		stationary
+		stationary 
 			snap
+				basically spawns at some distance from you
+				with added raycasting
+				and previsualisation
 			hover
+		swiping
+			hammer, axe, knife, yadayada
+			rotating turrets
+			probably weird hitboxes
+			angle, range, angle variation, 
 	trajectory
+		Some trajectories can be implemented as projectiles
+			orbit, slicing
+		However, if we want more custom stuff, some will need to be implemented as animations ?
+			at least, bound to a point on the character
+			think lances, swords and knives
 		sweeping
 		spin - reimplement
+			is there an actual tactical advantage to a spinning projectile ?
+	shields
+		basically large rigid bodies with affectable
 	damage
 		figure out
 			buildup damage//how many hits before damage is applied? how much damage?
-			stack damage//
+			unstackable damage//
 				all require effect identity?
 
 		implement
-			slow effect//speed damage?
+			behaviour for weapons
 			blind effect//vision damage?
 			headshot
-			IAffectable Affectable AffectableWeakpoint
-			emp
-				increase next frame time?
+				multiplier for weakspots?
+				IAffectable Affectable AffectableWeakpoint
+					multiple affectables for single lifepoint and modif?
 			radar
-				effect or AOE ?
 				gradient ?
-			damage
-			rof reduction
+				https://youtu.be/OJkGGuudm38?t=364
+				does mean double
 			knockback can deflect projectile
+				does projectle need to be affectable ?
+				can I jury rig it?
 				depends on size and velocity
 				locked on can still dodge
 			events
@@ -36,22 +161,29 @@ projectile
 				else
 					create parent
 	cosmetic
+		types ?
+			plasma, electric, powder
 		color-at-start
 		color-at-end
-		particles on fire
-		particles on contact
-		fire sound
-		contact sound
-	
+		particles fire/hit
+		sound fire/hit
+		should ideally be randon, and attached to a particular card
+
 	behaviour
 		trigger
+			enemy gets away for mine
+			enemy enters range
+			hit
+			timer
 		discard
 			discarding element discards children
 			element can die and not be discarded
-		
+
 	sentry?
 		sticking/hovering bullet with automatic subweapon
 	chain-lightning?
+		subweapon with min range?
+		or simply non-stackable 
 
 
 sniper missing zoom
@@ -59,8 +191,12 @@ shotgun v
 machine gun v
 flamethrower d
 knife not great but yes
+	would need a swipe type of movement
+	velocity and range still make sense
 chainsaw same
 axe worse
+	difference is damage on hit or damage on contact
+	also perforation
 shield d
 missile launcher v
 mines d
@@ -68,18 +204,30 @@ shield thrower v
 reinhardt missile v
 attracting missile v
 constant healing factor v
+mei freezing beam v
 
 to theorize
 	difference between weapon and subweapon
-	weapon has recoil - subweapon could use some?
-	subweapon has autoaim - could definitely work
-		but what about angle limitation
-			could work, but only if turret has real orientation
-	subweapon fires automatically
-		simple bool
-	trajectory display
-		can be expensive
-		by default on turret deploy
+		aiming controller
+		activation
+			trigger vs birth
+		recoil
+		
+		fusing
+			could allow taking control from drone
+			weapon that triggers on death
+			turret with recoil
+
+
+		weapon has recoil - subweapon could use some?
+		subweapon has autoaim - could definitely work
+			but what about angle limitation
+				could work, but only if turret has real orientation
+		subweapon fires automatically
+			ideally some weapon could be automatic
+		trajectory display
+			can be expensive
+			by default on turret deploy / snap
 	self
 		speed modifier
 		sight modifier
@@ -94,11 +242,15 @@ to theorize
 			???
 		jump
 			self knockback?
-	
+		wall-walking
+		flight
+		surf
+		jump
+		bike
 	shields
 		knockback always on center of mass
 		no freeze or blindness?
-		
+			types of shield
 	maps
 		tunnels
 		every single doom maps?
@@ -113,6 +265,7 @@ to theorize
 				trajectory
 				effect
 					explosion
+						screenshake, blindess, etc
 				subweapon
 					aim
 					shot
@@ -134,7 +287,7 @@ to theorize
 			projectile (if type gun)
 				subweapon
 					type
-						* self - does nothing
+						* self - does nothing / rocket jump ?
 						* explosion - applies effect in range
 						* gun - sends projectile to apply effect
 						
@@ -187,17 +340,54 @@ to theorize
 				fixing
 					* some way to bind the death of the projectile
 						and the end of the effect
-		
-		
+	weapon card
+		weapon type + modifiers ?
+	weapon modifiers
+		positive
+			friendly fire off
+				heal allies
+			aim (weapon only)
+			positive effect
+			resource boost
+			allow 1-by-1 reload
+			range/lifetime/etc.
+			silent
+			better damage against shields
+			better damage against unshielded
+			damage goes through shield
+		negative
+			worse against shields
+			worse against no shields
+			reload penalty
+			cancel bonus
+			loud
+			knockback
+			negative effect on self?
+				damage, slowness, etc
+		tradeoff
+			heat-type ammo
+				constant recharge, but less ammo and 0ammo penalty
+			automatic
+			transform into heal only
+			active bullet limit, but limitless range
+			shotgun
+			machinegun
+	player cards
+		3rd person view
+		more control over droppoint
+		redrop
+		change bot shape
+		movement type
+
+
 goals
 	artillery fight
 		spotter/marker and shooter team
 		coordinates
 	cards become more powerful, allowing closer and closer customization
-
-	Killing someone gives you lvls
-	Getting a lvl gives everyone else upgrade points for their weapons
-	lvls somehow help getting to boss?
+	terrain becomes more and more destroyed
+	Dying gives you new cards
+	Lead player will be more and more outclassed
 
 controller
 	fix jump
@@ -220,13 +410,6 @@ aesthetics
 		fuse two explosions with clear line of sight?
 		volumetric explosion
 			https://docs.unity3d.com/510/Documentation/Manual/DirectX11.html
-movement
-	flight
-	surf
-	jump
-	bike
-	dash
-	teleportation
 
 
 pure fps
@@ -247,7 +430,6 @@ pure fps
 				high damage
 				mid rof
 				no headshots
-			
 			sniper
 				low ammunition
 				high recoil

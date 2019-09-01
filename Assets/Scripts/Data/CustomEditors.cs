@@ -16,48 +16,23 @@ static public class CustomPropertyTools
     }
 }
 
-[CustomPropertyDrawer(typeof(ProjectileData))]
-public class ProjectileDataEditor : PropertyDrawer
+
+[CustomEditor(typeof(Affectable))]
+public class AffectableEditor : Editor
 {
-    const int curveWidth = 50;
-    const float min = 0;
-    const float max = 1;
-
-    public override void OnGUI(Rect pos, SerializedProperty prop, GUIContent label)
+    public override void OnInspectorGUI()
     {
-       if (checkLifetime(prop))
-            CustomPropertyTools.DisplayWarning(ref pos, "Lifetime is not positive");
+        DrawDefaultInspector();
 
-        EditorGUI.PropertyField(pos, prop, true);
-    }
-
-    public override float GetPropertyHeight(SerializedProperty prop, GUIContent label)
-    {
-        int warningSpace = 0;
-
-        if (checkLifetime(prop))
-            warningSpace++;
-
-        return EditorGUI.GetPropertyHeight(prop, label) + warningSpace * EditorGUIUtility.singleLineHeight;
-    }
-
-    bool checkLifetime(SerializedProperty prop)
-    {
-        float lifetime = prop
-           .FindPropertyRelative("trajectory")
-           .FindPropertyRelative("lifetime")
-           .floatValue;
-
-        return lifetime <= 0f;
-    }
-
-    bool checkWidth(SerializedProperty prop)
-    {
-        float lifetime = prop
-           .FindPropertyRelative("trajectory")
-           .FindPropertyRelative("lifetime")
-           .floatValue;
-
-        return lifetime <= 0f;
+        if (GUILayout.Button("Add effect"))
+        {
+            ((Affectable)target).Apply(((Affectable)target).toAdd, Time.time + 1f, Vector3.zero, Vector3.zero);
+        }
     }
 }
+
+[CustomEditor(typeof(PlayerControllerAffectable))]
+public class PlayerControllerAffectableEditor : AffectableEditor { }
+
+[CustomEditor(typeof(RigidBodyAffectable))]
+public class RigidBodyAffectableEditor : AffectableEditor { }

@@ -3,7 +3,8 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class PoolSubject : MonoBehaviour {
+public class PoolSubject : MonoBehaviour
+{
 
     public IPool parent;
     public float killtime;

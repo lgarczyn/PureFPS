@@ -2,19 +2,21 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class WeaponAudio : MonoBehaviour {
-    
+public class WeaponAudio : MonoBehaviour
+{
+
     public float volumeMultiplier = 0.2f;
     bool isPlaying;
+    Range currentRange;
 
     public void StartFire(float rps)
     {
         //uniDebug.Log("Starting fire fps:" + rps);
         AudioSource source = GetComponent<AudioSource>();
-        
+
         Range range = WeaponAudioManager.instance.GetClip(rps);
         float pitch = rps * source.clip.length / range.shotCount;
-        source.volume = volumeMultiplier;
+        //source.volume = volumeMultiplier;
 
         if (source.clip != range.clip)
         {
@@ -40,6 +42,11 @@ public class WeaponAudio : MonoBehaviour {
             isPlaying = true;
             source.Play();
         }
+    }
+
+    public void UpdateRof()
+    {
+
     }
 
     public void EndFire()

@@ -10,11 +10,12 @@ public struct Range
     public AudioClip clip;
 }
 
-public class WeaponAudioManager : Singleton<WeaponAudioManager> {
+public class WeaponAudioManager : Singleton<WeaponAudioManager>
+{
 
     public Range[] ranges;
 
-	public Range GetClip(float rps)
+    public Range GetClip(float rps)
     {
         for (int i = 0; i < ranges.Length; i++)
         {

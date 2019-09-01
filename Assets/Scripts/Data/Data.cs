@@ -1,4 +1,5 @@
 ﻿using UnityEngine;
+using System.Collections.Generic;
 
 //REQUIREMENTS
 //Cannot have infinite stationaries
@@ -14,70 +15,70 @@ namespace Data
         Contact,//Apply effect on player, or on contact with subweapon
         Explosion,//Apply effect on all in range, around player or projectile, as described by ExplosionData
         Gun,//Apply effect with projectile, as described by ShotData and ProjectileData
-        Shield,//Deploy shield on Player, or
+        Shield,//Deploy shield on Player, or on subweapon
     }
 
     [System.Serializable]
-    public struct WeaponData
+    public class WeaponData
     {
-        public string name;
-
         public WeaponType type;
+
+        [ConditionalField("type", true, WeaponType.Shield)]
         public EffectData effect;
 
         //Ignored unless type == shield
+        [ConditionalField("type", false, WeaponType.Shield)]
         public ShieldData shield;
 
         //Ignored unless type == explosion
+        [ConditionalField("type", false, WeaponType.Explosion)]
         public ExplosionData explosion;
 
         //Ignored unless type == gun
-        public ShotData shot;
-        public RecoilData recoil;
-        public ProjectileData projectile;
-
-        public ResourceData resource;
-    }
-
-    //public float speed_modifier;//0.5-1.5
-    //public float fire_aim_modifier;//only applied during fire
-    //public float aim_modifier;//only applied during fire
-    //cosmetic
-    //public CosmeticData? shot_cosmetic;
-
-
-    [System.Serializable]
-    public class SubWeaponData
-    {
-        public WeaponType type;//Is the projectile a shield, an AOE effect, a turret or a contact thing
-        public ActivationData activation;//When does the subweapon start acting
-        public EffectData effect;
-
-        public ShieldData shield;//Ignored unless type == shield
-
-        public ExplosionData explosion;//Ignored unless type == explosion
-
+        [ConditionalField("type", false, WeaponType.Gun)]
         public AimData aim;
+        [ConditionalField("type", false, WeaponType.Gun)]
         public ShotData shot;
+        [ConditionalField("type", false, WeaponType.Gun)]
+        public RecoilData recoil;
+        [ConditionalField("type", false, WeaponType.Gun)]
         public ProjectileData projectile;
 
         public ResourceData resource;
     }
 
+    public class SubweaponData: WeaponData
+    {
+        public ActivationData activation;
+    }
 
+    public enum TrajectoryType
+    {
+        Parabolic,
+        Orbital,
+    }
 
     [System.Serializable]
     public struct ProjectileData
     {
         [Range(0f, 1f)]
         public float width;
+        [Range(0.1f, 1000f)]
+        public float lifetime;
+        [Range(0.1f, 1000f)]
+        public float lifetimeVariation;
 
-        public TrajectoryData trajectory;
+        public TrajectoryType trajectoryType;
+
+        [ConditionalField("trajectoryType", false, TrajectoryType.Parabolic)]
+        public ParabolicTrajectoryData bulletTrajectory;
+        [ConditionalField("trajectoryType", false, TrajectoryType.Orbital)]
+        public OrbitalTrajectoryData orbitTrajectory;
         public BehaviourData behaviour;
 
         //subprojectile
         [System.NonSerialized]
-        public SubWeaponData subweapon;
+        public List<SubweaponData> subweapons;
 
         //cosmetic
         //public CosmeticData? hit_cosmetic;
@@ -85,18 +86,25 @@ namespace Data
     }
 
     [System.Serializable]
+    public enum ShieldShape
+    {
+        Sphere,
+        LionHeart,
+        Aegis,
+    }
+
+    [System.Serializable]
     public struct ShieldData
     {
-        [Range(0, 1f)]
+        [Range(1, 10f)]
         public float size;
-        [Range(0, 100f)]
-        public float health;
-        //ShieldShape shape;
+        public ShieldShape shape;
     }
 
     [System.Serializable]
     public struct ExplosionData
     {
+        [Range(0.01f, 100f)]
         public float range;
         public float duration;//Ignored if explosion is activated on a moving projectile?
         public EffectData effect;
@@ -130,7 +138,7 @@ namespace Data
         [Range(1, 100)]
         public int count;//number of projectiles, strong cost multiplier
         [Range(0f, 360f)]
-        public float cone;//angle of firing cone
+        public float precision;//angle of firing cone or orbit angle variation
         [Range(0f, 1000f)]
         public float velocity;//muzzle velocity
         [Range(0f, 1f)]
@@ -161,11 +169,12 @@ namespace Data
     }
 
     [System.Serializable]
-    public struct ResourceData {
+    public struct ResourceData
+    {
 
-        [Range(0, 1000000)]
+        [Range(0, 1000)]
         public int resourceMax; //all-time ammo capacity of the weapon. 0 is infinite ammo
-        [Range(0, 1000000)]
+        [Range(0, 1000)]
         public int resourceCap; //limit of ammunition in the magazine. 0 is no magazine management
         //public int shot_cost; //cost of ammunition per shot
         //int abs_count; //limit of ammunition between pickup.
@@ -207,43 +216,48 @@ namespace Data
     }
 
     [System.Serializable]
+    public struct Effect
+    {
+        public float value;
+        public float duration;
+    }
+
+    [System.Serializable]
     public struct EffectData
     {
         [Range(0, 1000)]
         public int buildup;//number of hit required for damage to be applied. damage will be multiplied by this number. if <2 ignored
 
-        public float damage;
-        [Range(0f, 600f)]
-        public float damageDuration;
-        //public float headshot_multiplier;
-        public float freeze;
-        [Range(0f, 600f)]
-        public float freezeDuration;
+        //health based effects
+        //TODO damage information (enemy multiplier, friendly-fire multiplier, shield multiplier)
+        public Effect damage;
+        //shielf based effect
+        public Effect shield;
+        public Effect blindness;
+        //multiplier based effects
+        public Effect speed;
+        public Effect rof;
 
-        public float blindness;
-        [Range(0f, 600f)]
-        public float blindnessDuration;
 
         public float knockback;//force applied from effect source to outside, can be negative.
     }
 
     [System.Serializable]
-    public struct TrajectoryData
+    public struct ParabolicTrajectoryData
     {
-        //public float spin_angle_increment;
-        //public float spin_force;
-        //public float spin_starting_time;
         [Range(-10f, 10f)]
         public float gravity;
-        [Range(0.1f, 1000f)]
-        public float lifetime;
-        [Range(0.1f, 1000f)]
-        public float lifetimeVariation;
         [Range(0, 100)]
         public int bounceCount;
-        //public float acceleration;
-        //public bool follow_player;
-        //public MovementType move_type;
+    }
+
+    public struct OrbitalTrajectoryData
+    {
+        //0 is vertical, -90 is left to right, 90 is right to left
+        public float angle;
+        public float lifetime;
+        public float range;
+
     }
 
     [System.Serializable]

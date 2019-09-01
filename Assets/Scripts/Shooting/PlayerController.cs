@@ -9,17 +9,18 @@ using Random = UnityEngine.Random;
 public class PlayerController : AWeaponController
 {
     [SerializeField]
-    private float m_WalkSpeed;
+    private float walkSpeed = 8f;
+    public float speedMultiplier = 1f;
     [SerializeField]
-    private float m_JumpVelocity;
+    private float jumpVelocity = 8f;
     [SerializeField]
-    private float m_StickToGroundForce;
+    private float stickToGroundForce = 0.1f;
     [SerializeField]
-    private float m_GravityMultiplier;
+    private float gravityMultiplier = 1f;
     [SerializeField]
-    private Camera m_Camera;
+    private Camera playerCamera;
     [SerializeField]
-    private bool m_ConstantFire;
+    private bool constantFire = false;
     [SerializeField]
     private float XSensitivity = 2f;
     [SerializeField]
@@ -51,8 +52,8 @@ public class PlayerController : AWeaponController
     {
         m_CharacterController = GetComponent<CharacterController>();
         m_AudioSource = GetComponent<AudioSource>();
-        if (m_Camera == null)
-            m_Camera = Camera.main;
+        if (playerCamera == null)
+            playerCamera = Camera.main;
 
         m_State = State.Grounded;
 
@@ -123,11 +124,11 @@ public class PlayerController : AWeaponController
 
         if (m_CharacterController.isGrounded)
         {
-            m_MoveDir.y = -m_StickToGroundForce;
+            m_MoveDir.y = -stickToGroundForce;
 
             if (m_State == State.Jumping)
             {
-                m_MoveDir.y = m_JumpVelocity;
+                m_MoveDir.y = jumpVelocity * speedMultiplier;
                 m_State = State.Falling;
             }
             else
@@ -137,7 +138,7 @@ public class PlayerController : AWeaponController
         }
         else
         {
-            m_MoveDir += Physics.gravity * m_GravityMultiplier * Time.fixedDeltaTime;
+            m_MoveDir += Physics.gravity * gravityMultiplier * Time.fixedDeltaTime;
         }
         m_CollisionFlags = m_CharacterController.Move(m_MoveDir * Time.fixedDeltaTime);
     }
@@ -149,7 +150,7 @@ public class PlayerController : AWeaponController
         float horizontal = CrossPlatformInputManager.GetAxis("Horizontal");
         float vertical = CrossPlatformInputManager.GetAxis("Vertical");
 
-        float speed = m_WalkSpeed;
+        float speed = walkSpeed * speedMultiplier;
         m_TargetMovement = new Vector2(horizontal, vertical);
 
         // normalize input if it exceeds 1 in combined length:
@@ -157,7 +158,7 @@ public class PlayerController : AWeaponController
         {
             m_TargetMovement.Normalize();
         }
-            
+
         return speed;
     }
 
@@ -177,18 +178,15 @@ public class PlayerController : AWeaponController
         }
         body.AddForceAtPosition(m_CharacterController.velocity * 0.1f, hit.point, ForceMode.Impulse);
     }
-    
+
     [SerializeField]
-    private float m_MovementTime = 0.5f;
-    [SerializeField]
-    private float m_RotationForce = 10000f;
     private float m_LastMovementUpdate;
 
     private void LateUpdate()
     {
         UpdateRotation(Time.time);
         transform.localRotation = Quaternion.AngleAxis(m_CurrentRotation.x, Vector3.up);
-        m_Camera.transform.localRotation = Quaternion.AngleAxis(-m_CurrentRotation.y, Vector3.right);
+        playerCamera.transform.localRotation = Quaternion.AngleAxis(-m_CurrentRotation.y, Vector3.right);
 
     }
 
@@ -212,8 +210,8 @@ public class PlayerController : AWeaponController
 
     public override WeaponIntentions GetIntentions()
     {
-        Quaternion rotation = m_Camera.transform.rotation;
-        return new WeaponIntentions(Input.GetMouseButton(0) || m_ConstantFire, Input.GetMouseButton(1));
+        Quaternion rotation = playerCamera.transform.rotation;
+        return new WeaponIntentions(Input.GetMouseButton(0) || constantFire, Input.GetMouseButton(1));
     }
 
     public override void HandleRecoil(Vector2 recoil)

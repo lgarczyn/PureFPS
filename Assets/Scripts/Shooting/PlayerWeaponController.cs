@@ -22,6 +22,7 @@ public abstract class AWeaponController : MonoBehaviour
     public abstract Quaternion GetRotation(float time);
 }
 /*
+//TODO: cleanup
 public class PlayerWeaponController : AWeaponController {
     
     public Transform head;

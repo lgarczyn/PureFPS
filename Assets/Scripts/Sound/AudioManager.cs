@@ -3,7 +3,8 @@ using System.Collections.Generic;
 using UnityEngine;
 using System.Linq;
 
-public class AudioManager : Pool<AudioManager> {
+public class AudioManager : Pool<AudioManager>
+{
 
     Dictionary<AudioClip, double> delays = new Dictionary<AudioClip, double>();
     Dictionary<AudioClip, double> delaysID = new Dictionary<AudioClip, double>();
@@ -29,7 +30,7 @@ public class AudioManager : Pool<AudioManager> {
         AudioSource source = instance.GetComponent<AudioSource>();
 
         PoolSubject subject = instance.GetComponent<PoolSubject>();
-        
+
 
         source.clip = clip;
         source.pitch = Mathf.Max(rps / 30, 1f);
