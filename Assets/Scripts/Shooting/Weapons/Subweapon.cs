@@ -43,7 +43,7 @@ public class Subweapon : MultiUpdateObject, IWeapon
     {
         foreach (var child in _children)
         {
-            child.Value.NotifyDeadWeapon();
+            child.Value.NotifyDeadParent();
         }
         _children.Clear();
         shield.Deactivate();
@@ -66,9 +66,15 @@ public class Subweapon : MultiUpdateObject, IWeapon
         }
     }
 
+    public Vector3 GetPosition()
+    {
+        //TODO use projectile and time argument + transform.localposition ?
+        return transform.position;
+    }
+
     public void Activate(WeaponData data, float time)
     {
-        this.Reset(time);
+        this.ResetMultiUpdate(time);
 
         proj = transform.parent.GetComponent<Projectile>();
 
@@ -77,7 +83,7 @@ public class Subweapon : MultiUpdateObject, IWeapon
         enabled = true;
 
         prevPosition = nextPosition = transform.position;
-        prevVelocity = nextVelocity = proj.velocity;
+        prevVelocity = nextVelocity = proj.GetComponent<Rigidbody>().velocity;//MAKE BETTER
 
         resourceLevel = data.resource.resourceCap;
 
@@ -87,7 +93,7 @@ public class Subweapon : MultiUpdateObject, IWeapon
     protected override void BeforeUpdates()
     {
         prevVelocity = nextVelocity;
-        nextVelocity = proj.velocity;
+        nextVelocity = proj.GetComponent<Rigidbody>().velocity;//MAKE BETTER GetVelocityAt()
 
         prevPosition = nextPosition;
         nextPosition = transform.position;
@@ -104,8 +110,6 @@ public class Subweapon : MultiUpdateObject, IWeapon
                 {
                     //Spawn correct explosion graphics
                     Explode(0f);
-                    //TODO: check difference between kill and retire
-                    GetComponent<Projectile>().Retire();
                     break;
                 }
             case WeaponType.Shield:
@@ -119,9 +123,11 @@ public class Subweapon : MultiUpdateObject, IWeapon
         return Wait.ForEver();
     }
 
+    //TODO fix all of these uses of delta time, which is usually false on the first frame anyway
+
     void Explode(float deltaTime)
     {
-        Vector3 gravity =  Physics.gravity; //TODO get actual gravity from parent projectile. better yet, implement getpos from proj
+        Vector3 gravity = Physics.gravity; //TODO get actual gravity from parent projectile. better yet, implement getpos from proj
         Vector3 position = PhysicsTools.GetPosition(prevPosition, prevVelocity, gravity, deltaTime);
 
         ExplosionManager.instance.GetItem(position, data.explosion.range);
@@ -130,16 +136,14 @@ public class Subweapon : MultiUpdateObject, IWeapon
     void FireAt(float deltaTime, Quaternion direction, float speed)
     {
         //calculate real position in this frame
-        Vector3 gravity =  Physics.gravity; //TODO get actual gravity from parent projectile
+        //TODO use projectile to also get _lastTime ???
+        //If I want an actual replayability, this is gonna be a mess
+        Vector3 gravity = Physics.gravity; //TODO get actual gravity from parent projectile
         Vector3 position = PhysicsTools.GetPosition(prevPosition, prevVelocity, gravity, deltaTime);
-        Vector3 velocity = prevVelocity + gravity * deltaTime;
 
         for (int i = 0; i < data.shot.rate; i++)
         {
-            Vector3 forward = PhysicsTools.RandomVectorInCone(data.shot.precision);
-
-            Vector3 projVelocity = velocity * data.shot.inheritedVelocity + forward * data.shot.velocity;
-            ProjectileManager.instance.GetItem(this, position, projVelocity, currentTime, data.projectile, data.effect);
+            ProjectileManager.instance.InitProjectile(this, position, transform.rotation, currentTime, data.projectile, data.effect);
         }
     }
 
@@ -179,7 +183,7 @@ public class Subweapon : MultiUpdateObject, IWeapon
         targets = targetsEnumerable.Take(data.autoAim.maxTargets).ToArray();
     }*/
 
-    protected override Wait MultiUpdate(float deltaTime, float frameRatio)
+    protected override Wait MultiUpdate(float deltaTime)
     {
         //Waits for setup time if present, waits forever if explosion type
         if (state == State.Setup)

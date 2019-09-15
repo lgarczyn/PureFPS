@@ -4,29 +4,36 @@ public class MultiUpdateObject : MonoBehaviour
 {
 
     protected float prevFrameTime;
+    protected float currentTime;
     protected float nextFrameTime;
     protected float timeToNextUpdate;
+    protected float timeOfLastUpdate;
     protected float rofMultiplier;
 
-    protected float currentTime
+    protected float frameRatio
     {
         get
         {
-            return prevFrameTime + timeToNextUpdate;
+            return (currentTime - prevFrameTime) / (nextFrameTime - prevFrameTime);
+        }
+    }
+    protected float deltaTime
+    {
+        get
+        {
+            return currentTime - timeOfLastUpdate;
         }
     }
 
     protected void OnEnable()
     {
-        prevFrameTime = nextFrameTime = Time.time;
-        timeToNextUpdate = 0;
-        rofMultiplier = 1f;
+        ResetMultiUpdate(Time.time);
         RealOnEnable();
     }
 
-    protected void Reset(float time)
+    protected void ResetMultiUpdate(float time)
     {
-        prevFrameTime = nextFrameTime = time;
+        timeOfLastUpdate = currentTime = prevFrameTime = nextFrameTime = time;
         timeToNextUpdate = 0;
         rofMultiplier = 1f;
     }
@@ -78,14 +85,17 @@ public class MultiUpdateObject : MonoBehaviour
         remainingTime *= rofMultiplier;
 
         int safety = 0;
+        if (remainingTime == 0)
+            return;
 
         while (timeToNextUpdate <= remainingTime)
         {
             remainingTime -= timeToNextUpdate;
 
-            float frameRatio = 1f - (remainingTime) / (nextFrameTime - prevFrameTime);//?
+            currentTime += timeToNextUpdate / rofMultiplier;
+            timeOfLastUpdate = currentTime;
 
-            Wait wait = MultiUpdate(timeToNextUpdate, frameRatio);
+            Wait wait = MultiUpdate(timeToNextUpdate);
 
             switch (wait.waitingType)
             {
@@ -109,20 +119,21 @@ public class MultiUpdateObject : MonoBehaviour
                 break;
             }
         }
-        timeToNextUpdate -= remainingTime * rofMultiplier;
+        timeToNextUpdate -= remainingTime;
     }
 
-    void Update()
+    void FixedUpdate()
     {
         prevFrameTime = nextFrameTime;
         nextFrameTime = Time.time;
+        currentTime = prevFrameTime;
 
         BeforeUpdates();
         CallMultiUpdates();
         AfterUpdates();
     }
 
-    protected virtual Wait MultiUpdate(float deltaTime, float frameRatio)
+    protected virtual Wait MultiUpdate(float deltaTime)
     {
         return Wait.ForFrame();
     }

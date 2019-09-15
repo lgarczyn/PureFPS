@@ -1,14 +1,18 @@
 current
-	BUG
-		subweapon and projectiles don't retire
-			subweapon Wait.forever command is bad here, right?
 	TODO SIMPLE
 		implement subweapon lifetime/max number
 		implement enemy player for murder
 		create subweapon iterator and counter tools
 			once done, remove empty lists
 				is this needed ?
+		cleanup omnisharp
 	TODO COMPLEX
+		damage over time
+			effect that requires contact
+			lifetime is the same, damage still spread over it
+			use trigger collider to do it
+			add effect and only use it if it's in contact?
+				check by distance?
 		swiping projectile
 			range
 			angle 0 is vertical
@@ -35,38 +39,54 @@ current
 					since the logic is the same, a better
 	should a shield appear at the end of a frame?
 		any weapon should actually only fire at end of frame
+			however Input has a potential lag of one frame
+			shields can't be retroactively placed
 		makes sense, since they can only work for future updates
-		also makes raycasting easier, since it matches actual time
-	I can only spawn bullets at specific times
-		so either I spawn them before, or spawn them after
-		after makes a lot more sense, but they risk going through walls
-		...
-		can I use coroutines to call precisly at the right time?
-		can I?
-		probably not
-		nope
-		ideally should be called from inside the physics solver
-		but I can't do that can I?
-		...
-		so a simple raycast + spawn I guess
-			ideally should add points to the trailRenderer
 	actual TODO
-		projectile just uses rigidbody, with players shields and affectables using continuous dynamic collisions
 		projectile can activate and use a joint, and attach itself to player
 			no need for hierarchy
 			need to learn how to setup stuff
 				need to rotate the plan axis quaternion
 				need to set up original position
+		information needed:
+			center position, target transform, range, velocity, lifetime
+				shit, range is different than lifetime
 		remove work from weapon and subweapons
 			precision could be handled by projectiles
-			
-		
+	Time.time is undefined during awake, shit
+		also, can I use Time.time in different scene?
+		do I risk loosing precision?
+
+
+	WHAT DO I NEED
+		subframe logic
+			raycast
+				+get exact time
+				=can spawn mid-frame, but arrival might be in different order
+				-can't kill shield midframe without massive work
+			Unity
+				= may be able to deduce time
+				+ can accelerate item one frame
+				- can't kill shield midframe
+			bullet
+				+is able to deduce time
+				+can accelerate items one frame
+				+can kill shield midframe perfectly fine
+					not exactly sure if it's a good idea
+		advanced masks
+			raycasts
+				yikes
+			Unity
+				items have an ignore list, that can't be serialized
+			Bullet
+				advanced mask callbacks, varying solutions
 
 bugs
 	particles rotate when looked from above or underneath and the camera moves
 		use new standard particle shader
 	effect len probably doesn't happen for the first frame, and it isn't balanced next frame
 		same for effects happening in the "past"
+		add a spent-effect date, or reduce value and starting time
 	sound is badly affected by rof
 		sound doesn't go as low
 		startfire isn't called again and can't update the rof

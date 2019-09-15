@@ -6,6 +6,8 @@ public interface IWeapon
 {
     void NotifyDeadProjectile(Projectile projectile);
     void RemoveResource(float resource, float frameTime);
+
+    Vector3 GetPosition();
 }
 
 public class Weapon : MultiUpdateObject, IWeapon
@@ -25,8 +27,8 @@ public class Weapon : MultiUpdateObject, IWeapon
 
     Vector3 nextPosition;
     Vector3 prevPosition;
-    float nextVelocity;
-    float prevVelocity;
+    Vector3 nextVelocity;
+    Vector3 prevVelocity;
 
     State prevState;
     State state;
@@ -43,7 +45,7 @@ public class Weapon : MultiUpdateObject, IWeapon
     {
         foreach (var child in _children)
         {
-            child.Value.NotifyDeadWeapon();
+            child.Value.NotifyDeadParent();
         }
     }
 
@@ -60,6 +62,12 @@ public class Weapon : MultiUpdateObject, IWeapon
         this.resourceLevel -= resourceDrain;
     }
 
+    public Vector3 GetPosition()
+    {
+        //TODO use player and time argument + transform.localposition ?
+        return transform.position;
+    }
+
     enum State
     {
         None,
@@ -73,7 +81,7 @@ public class Weapon : MultiUpdateObject, IWeapon
         weaponAudio = GetComponent<WeaponAudio>();
         resourceLevel = weaponData.resource.resourceCap;
         prevPosition = nextPosition = transform.position;
-        prevVelocity = nextVelocity = 0f;
+        prevVelocity = nextVelocity = Vector3.zero;
 
 
         if (weaponData.shot.rate < 0.01f)
@@ -95,7 +103,8 @@ public class Weapon : MultiUpdateObject, IWeapon
         var intentions = controller.GetIntentions();
 
         prevVelocity = nextVelocity;
-        nextVelocity = 0;// GetComponent<Rigidbody>().velocity.magnitude; TODO get velocity
+        //TODO: clean this
+        nextVelocity = playerAffectable.GetComponent<Rigidbody>().velocity;
 
         prevPosition = nextPosition;
         nextPosition = transform.position;
@@ -116,7 +125,7 @@ public class Weapon : MultiUpdateObject, IWeapon
             ammoDisplay.SetRatio(weaponData.resource.resourceCap == 0 ? 1f : resourceLevel / weaponData.resource.resourceCap);
     }
 
-    protected override Wait MultiUpdate(float deltaTime, float frameRatio)
+    protected override Wait MultiUpdate(float deltaTime)
     {
 
         if ((state == State.None || state == State.ReloadingInteruptible) && intendToFire)
@@ -144,9 +153,9 @@ public class Weapon : MultiUpdateObject, IWeapon
             StopFiring();
 
         if (state == State.None)
-            ret = Rest(deltaTime);
+            ret = Rest();
         else if (state == State.Firing)
-            ret = Fire(deltaTime, frameRatio);
+            ret = Fire();
         else if (state == State.Reloading)
             ret = Reload();
         else if (state == State.ReloadingInteruptible)
@@ -174,10 +183,27 @@ public class Weapon : MultiUpdateObject, IWeapon
     #endregion
     #region States
 
-    private Wait ShootGun(float deltaTime, float frameRatio)
+    private Wait ShootGun()
     {
-        Vector3 position = Vector3.Lerp(prevPosition, nextPosition, frameRatio);
-        float velocity = Mathf.Lerp(prevVelocity, nextVelocity, frameRatio);
+        float frameRatio = this.frameRatio;
+        float deltaTime = this.deltaTime;
+
+        //Vector3 position = Vector3.Lerp(prevPosition, nextPosition, frameRatio);
+        Vector3 velocity = Vector3.Lerp(prevVelocity, nextVelocity, frameRatio);
+
+        //Interpolate weapon position
+        Vector3 position;
+        Vector3 velocityDif = nextVelocity - prevVelocity;
+        if (velocityDif.sqrMagnitude == 0)
+        {
+            position = Vector3.Lerp(prevPosition, nextPosition, frameRatio);
+        }
+        else
+        {
+            Vector3 force = velocityDif / deltaTime;
+            position = prevPosition + velocity * deltaTime + 0.5f * force * deltaTime * deltaTime;
+        }
+
         //Quaternion rotation = Quaternion.Lerp(prevRotation, nextRotation, frameRatio);
         Quaternion rotation = controller.GetRotation(currentTime);
 
@@ -186,38 +212,40 @@ public class Weapon : MultiUpdateObject, IWeapon
 
         for (int i = 0; i < weaponData.shot.count; i++)
         {
-            Vector3 forward = PhysicsTools.RandomVectorInCone(weaponData.shot.precision);
-
-            forward *= weaponData.shot.velocity + velocity * weaponData.shot.inheritedVelocity;
-
-            Projectile p = ProjectileManager.instance.GetItem(this, position, rotation * forward, currentTime, weaponData.projectile, weaponData.effect);
+            Projectile p = ProjectileManager.instance.InitProjectile(
+                this,
+                position,
+                rotation,
+                currentTime,
+                weaponData.projectile,
+                weaponData.effect);
             _children.Add(p.GetID(), p);
         }
         return Wait.For(1f / weaponData.shot.rate);
     }
 
-    private Wait ShootContact(float deltaTime, float frameRatio)
+    private Wait ShootContact()
     {
         playerAffectable.Apply(weaponData.effect, currentTime, Vector3.up + Vector3.back, Vector3.zero);
         return Wait.For(1f / weaponData.shot.rate);
     }
 
-    private Wait ShootShield(float deltaTime, float frameRatio)
+    private Wait ShootShield()
     {
         shieldAffectable.Init(this, weaponData.shield.size);
         return Wait.ForFrame();
     }
 
-    private Wait Shoot(float deltaTime, float frameRatio)
+    private Wait Shoot()
     {
         if (weaponAudio)
             weaponAudio.StartFire(weaponData.shot.rate * playerAffectable.rofMult);
 
         switch (weaponData.type)
         {
-            case Data.WeaponType.Gun: return ShootGun(deltaTime, frameRatio);
-            case Data.WeaponType.Contact: return ShootContact(deltaTime, frameRatio);
-            case Data.WeaponType.Shield: return ShootShield(deltaTime, frameRatio);
+            case Data.WeaponType.Gun: return ShootGun();
+            case Data.WeaponType.Contact: return ShootContact();
+            case Data.WeaponType.Shield: return ShootShield();
             default: throw new System.Exception("Invalid State Exception");
         }
     }
@@ -231,7 +259,7 @@ public class Weapon : MultiUpdateObject, IWeapon
         }
     }
 
-    private Wait Fire(float deltaTime, float frameRatio)
+    private Wait Fire()
     {
 
         //if there is an ammo system
@@ -240,10 +268,10 @@ public class Weapon : MultiUpdateObject, IWeapon
             //TODO: maybe generalize this?
             if (weaponData.type != Data.WeaponType.Shield)
                 resourceLevel--;
-            return Shoot(deltaTime, frameRatio);
+            return Shoot();
         }
         else
-            return Shoot(deltaTime, frameRatio);
+            return Shoot();
     }
 
     private Wait Reload()
@@ -272,7 +300,7 @@ public class Weapon : MultiUpdateObject, IWeapon
         return Wait.For(weaponData.resource.timePerBullet);
     }
 
-    private Wait Rest(float deltaTime)
+    private Wait Rest()
     {
         if (weaponData.resource.resourcePerSec > 0f)
         {

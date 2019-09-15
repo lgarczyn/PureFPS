@@ -5,13 +5,13 @@ using System;
 public class ProjectileManager : Pool<ProjectileManager>
 {
 
-    public Projectile GetItem(IWeapon parent, Vector3 position, Vector3 velocity, float timeOfShot, Data.ProjectileData data, Data.EffectData effect)
+    public Projectile InitProjectile(IWeapon parent, Vector3 position, Quaternion rotation, float timeOfShot, Data.ProjectileData data, Data.EffectData effect)
     {
-        GameObject go = base.GetItem(transform, position);
+        GameObject go = base.GetItem();
 
         Projectile proj = go.GetComponent<Projectile>();
 
-        proj.Init(transform, parent, position, velocity, timeOfShot, data, effect);
+        proj.Init(parent, position, rotation, timeOfShot, data, effect);
 
         return proj;
     }
@@ -20,5 +20,6 @@ public class ProjectileManager : Pool<ProjectileManager>
     {
         item.GetComponent<TrailRenderer>().Clear();
         item.GetComponent<TrailRenderer>().enabled = false;
+        base.ReturnItem(item);
     }
 }

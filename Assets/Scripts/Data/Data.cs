@@ -47,7 +47,8 @@ namespace Data
         public ResourceData resource;
     }
 
-    public class SubweaponData: WeaponData
+    [System.Serializable]
+    public class SubweaponData : WeaponData
     {
         public ActivationData activation;
     }
@@ -63,6 +64,8 @@ namespace Data
     {
         [Range(0f, 1f)]
         public float width;
+        [Range(0f, 1000f)]
+        public float velocity;
         [Range(0.1f, 1000f)]
         public float lifetime;
         [Range(0.1f, 1000f)]
@@ -71,9 +74,9 @@ namespace Data
         public TrajectoryType trajectoryType;
 
         [ConditionalField("trajectoryType", false, TrajectoryType.Parabolic)]
-        public ParabolicTrajectoryData bulletTrajectory;
+        public ParabolicTrajectoryData parabolicTrajectory;
         [ConditionalField("trajectoryType", false, TrajectoryType.Orbital)]
-        public OrbitalTrajectoryData orbitTrajectory;
+        public OrbitalTrajectoryData orbitalTrajectory;
         public BehaviourData behaviour;
 
         //subprojectile
@@ -107,7 +110,6 @@ namespace Data
         [Range(0.01f, 100f)]
         public float range;
         public float duration;//Ignored if explosion is activated on a moving projectile?
-        public EffectData effect;
     }
 
     [System.Serializable]
@@ -137,13 +139,11 @@ namespace Data
     {
         [Range(1, 100)]
         public int count;//number of projectiles, strong cost multiplier
-        [Range(0f, 360f)]
-        public float precision;//angle of firing cone or orbit angle variation
-        [Range(0f, 1000f)]
-        public float velocity;//muzzle velocity
-        [Range(0f, 1f)]
-        public float inheritedVelocity;//Percent of player velocity added to muzzle velocity
-        [Range(0.1f, 100f)]
+        //[Range(0f, 1000f)]
+        //public float velocity;//muzzle velocity
+        //[Range(0f, 1f)]
+        //public float inheritedVelocity;//Percent of player velocity added to muzzle velocity
+        [Range(0.1f, 500f)]
         public float rate;//Bullets per second
     }
 
@@ -245,17 +245,23 @@ namespace Data
     [System.Serializable]
     public struct ParabolicTrajectoryData
     {
+        [Range(0f, 180f)]
+        public float cone;
         [Range(-10f, 10f)]
         public float gravity;
         [Range(0, 100)]
         public int bounceCount;
     }
 
+    [System.Serializable]
     public struct OrbitalTrajectoryData
     {
         //0 is vertical, -90 is left to right, 90 is right to left
-        public float angle;
-        public float lifetime;
+        [Range(-180f, 180f)]
+        public float tilt;
+        [Range(0f, 180f)]
+        public float tiltVariation;
+        [Range(1, 10)]
         public float range;
 
     }

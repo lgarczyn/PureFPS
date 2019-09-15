@@ -28,7 +28,7 @@ public class WeaponSerializable : Weapon, ISerializationCallbackReceiver
         {
             foreach (SubweaponData sub in subweapons)
             {
-                //TODO: remove
+                //TODO: remove once serialization is safe enough
                 if (subweaponsData.Any(a => a.data == sub))
                 {
                     Debug.LogError("Recursive subweapons detected, skipping");
@@ -46,6 +46,11 @@ public class WeaponSerializable : Weapon, ISerializationCallbackReceiver
         while (index < subweaponsData.Count)
         {
             SubweaponData subdata = subweaponsData[index].data;
+            if (subdata == null)
+            {
+                subdata = new SubweaponData();
+                subweaponsData[index] = new TreeItem(subweaponsData[index].depth, subdata);
+            }
             subdata.projectile.subweapons = new List<SubweaponData>();
 
             subweapons.Add(subdata);
@@ -76,9 +81,11 @@ public class WeaponSerializable : Weapon, ISerializationCallbackReceiver
     public void OnAfterDeserialize()
     {
         weaponData.projectile.subweapons = new List<SubweaponData>();
-        try {
+        try
+        {
             FoldTree(ref weaponData.projectile.subweapons, 0, 0);
-        } catch (Exception e)
+        }
+        catch (Exception e)
         {
             Debug.LogError(e);
         }

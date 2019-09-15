@@ -34,31 +34,41 @@ public class Pool<T> : Singleton<T>, IPool where T : Pool<T>
         GameObject instance = Instantiate(item);
         if (instance.GetComponent<PoolSubject>())
             instance.GetComponent<PoolSubject>().parent = this;
+        instance.transform.SetParent(transform);
         InitItem(instance);
         return instance;
     }
 
     protected virtual void InitItem(GameObject item) { }
 
-    protected virtual GameObject GetItem(Transform parent, Vector3 position)
+    protected virtual GameObject GetItem()
     {
         GameObject instance;
-        if (items.Count > 0)
-            instance = items.Pop();
-        else
-            instance = CreateItem();
-
+        do
+        {
+            if (items.Count > 0)
+                instance = items.Pop();
+            else
+                instance = CreateItem();
+        } while (instance == null); // Take in account possibility that gameobject was destroyed
 
         PoolSubject subject = instance.GetComponent<PoolSubject>();
         if (subject && subject.killtime > 0f)
             ReturnItem(instance, subject.killtime);
 
-        instance.SetActive(true);
-        instance.transform.SetParent(parent);
-        instance.transform.localPosition = position;
-
         //AudioSource source = instance.GetComponent<AudioSource>();
         //if (source) { source.enabled = true; source.Play(); }
+
+        instance.SetActive(true);
+
+        return (instance);
+    }
+
+    protected virtual GameObject GetItem(Transform parent, Vector3 position)
+    {
+        GameObject instance = GetItem();
+        instance.transform.SetParent(parent);
+        instance.transform.localPosition = position;
 
         return instance;
     }

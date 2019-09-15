@@ -1,0 +1,92 @@
+Here are all the code from when I assumed that Unity was capable of processing
+forces through a fixedFrame.
+It turns out that Unity apply all forces at the start of the frame and proceeds linearly
+Bummer
+
+File is in a txt format to not be compiled by unity.
+
+This is dirty 
+
+    private Vector3 predictedNextFramePos;
+
+    private void PrepareForNextStateOrbit(float time, float nextTime, bool firstFrame)
+    {
+        Vector3 startPos = _rigidbody.position;
+
+        if (firstFrame == false && Vector3.Distance(predictedNextFramePos, startPos) > 0.01f)
+            Debug.Log("WTF");
+
+        Vector3 nextPosition;
+        GetLocalOrbitPos(nextTime, out nextPosition);
+        nextPosition += _parent.GetPosition();
+
+        float fdt = Time.fixedDeltaTime;
+
+        float halfTime = (time + nextTime) / 2f;
+        Vector3 halfPosition;
+        GetLocalOrbitPos(halfTime, out halfPosition);
+        halfPosition += _parent.GetPosition();
+
+        Vector3 dp2 = nextPosition - startPos;
+        Vector3 dp1 = halfPosition - startPos;
+
+        Vector3 force = (dp2 - 2 * dp1) * 4 / (fdt * fdt);
+        Vector3 v0 = (dp2 / fdt) - (force * fdt / 2f);
+
+        Vector3 deltaPosPredicted = PhysicsTools.GetMovement(v0, force, fdt);
+        if (Vector3.Distance(deltaPosPredicted, dp2) > 0.001f)
+            Debug.Log("position prediction error: " + Vector3.Distance(deltaPosPredicted, dp2));
+
+        predictedNextFramePos = deltaPosPredicted + startPos;
+
+        Vector3 deltaHPosPredicted = PhysicsTools.GetMovement(v0, force, fdt / 2f);
+        if (Vector3.Distance(deltaHPosPredicted, dp1) > 0.001f)
+            Debug.Log("position prediction error: " + Vector3.Distance(deltaHPosPredicted, dp1));
+
+        //drawing the startpos, midpos, endpos triangle
+        Debug.DrawLine(startPos, startPos + dp2, Color.magenta, Time.fixedDeltaTime * 2);
+        Debug.DrawLine(startPos, startPos + dp1, Color.red, Time.fixedDeltaTime * 2);
+        Debug.DrawLine(startPos + dp2, startPos + dp1, Color.red, Time.fixedDeltaTime * 2);
+        //drawing v0 and force
+        Debug.DrawLine(startPos, startPos + force, Color.gray, Time.fixedDeltaTime * 2);
+        Debug.DrawLine(startPos, startPos + v0, Color.blue, Time.fixedDeltaTime * 2);
+        //drawing the parabola arc
+        {
+            Vector3 pos = startPos;
+            Vector3 vel = v0;
+            for (int i = 0; i < 10; i++)
+            {
+                Vector3 offset = PhysicsTools.GetMovementUpdateVelocity(ref vel, force, Time.fixedDeltaTime / 10f);
+                Debug.DrawLine(pos, pos + offset, Color.green, Time.fixedDeltaTime * 2);
+                pos += offset;
+            }
+        }
+
+        // Old version
+        // Vector3 deltaPosition = nextPosition - _rigidbody.position;
+        // Vector3 velocity = deltaPosition / t;
+        // SetPhysicsState(_rigidbody.position, velocity, time);
+
+        //Applying results
+        SetPhysicsState(startPos, v0, time);
+        _rigidbody.AddForce(force, ForceMode.Acceleration);
+    }
+
+    private void CalculatePhysicsStateParabolic()
+    {
+        // if the item should be slowed down
+        if (lastRatio != 1f)
+        {
+            _rigidbody.velocity /= lastRatio;
+            lastRatio = 1f;
+        }
+        // store the state and time for collision
+        SetPhysicsState(_rigidbody.position, _rigidbody.velocity, Time.fixedTime);
+        // apply gravity
+        if (_data.parabolicTrajectory.gravity != 0f)
+        {
+            _rigidbody.AddForce(Physics.gravity
+                * _data.parabolicTrajectory.gravity,
+                ForceMode.Acceleration);
+        }
+    }

@@ -140,7 +140,8 @@ public class PlayerController : AWeaponController
         {
             m_MoveDir += Physics.gravity * gravityMultiplier * Time.fixedDeltaTime;
         }
-        m_CollisionFlags = m_CharacterController.Move(m_MoveDir * Time.fixedDeltaTime);
+        if (m_CharacterController.enabled == true)
+            m_CollisionFlags = m_CharacterController.Move(m_MoveDir * Time.fixedDeltaTime);
     }
 
 
