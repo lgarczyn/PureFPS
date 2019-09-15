@@ -88,6 +88,7 @@ public class Projectile : MonoBehaviour
     void InitParabolic(Vector3 position, Quaternion rotation, float shotTime)
     {
         _bounces = _data.parabolicTrajectory.bounceCount;
+        SetBouncyness(_bounces > 0);
 
         Vector3 forward = rotation * PhysicsTools.RandomVectorInCone(_data.parabolicTrajectory.cone);
 
@@ -101,6 +102,7 @@ public class Projectile : MonoBehaviour
         //Accelerate projectiles by the time lost to frame imprecision
         lastRatio = (Time.fixedTime - lastTime) / Time.fixedDeltaTime;
         _rigidbody.velocity *= lastRatio;
+
         //Multiply gravity by the square of that factor, to account for the short time
         _rigidbody.AddForce(Physics.gravity
             * _data.parabolicTrajectory.gravity
@@ -108,11 +110,13 @@ public class Projectile : MonoBehaviour
             * lastRatio,
             ForceMode.Acceleration);
 
-        //TODO set bounciness to 0 if bouncecount is 0
+        //TODO calculate the actual position by iteration,
+        // given the frame count, and therefore the number of times gravity was applied
     }
 
     void InitOrbital(Vector3 position, Quaternion direction, float shotTime)
     {
+        SetBouncyness(false);
         //Apply tilt to the start rotation
         float tilt = _data.orbitalTrajectory.tiltVariation;
         tilt = Random.Range(-tilt, tilt);
@@ -183,6 +187,8 @@ public class Projectile : MonoBehaviour
         if (_exploded)
             return;
 
+        AddPositionToRenderer(_rigidbody.position);
+
         _exploded = true;
         enabled = false;
         _trailRenderer.enabled = false;
@@ -190,7 +196,6 @@ public class Projectile : MonoBehaviour
 
         _rigidbody.detectCollisions = false;
         _rigidbody.velocity = Vector3.zero;
-        //TODO: freeze rigidbody position at exact right position
 
         for (int i = 0; i < _data.subweapons.Count; i++)
         {
@@ -208,7 +213,8 @@ public class Projectile : MonoBehaviour
 
     public void Retire()
     {
-        //Check if not already retired (spooky)
+        //TODO Check if not already retired (spooky)
+        //Could happen if subweapons both try to retire it in NotifyDeadWeapon
         _trailRenderer.Clear();
         _parent.NotifyDeadProjectile(this);
         ProjectileManager.instance.ReturnItem(gameObject, 1f);
@@ -224,6 +230,11 @@ public class Projectile : MonoBehaviour
         if (velocity.sqrMagnitude != 0)
             _rigidbody.rotation = Quaternion.LookRotation(velocity, Vector3.up);
         AddPositionToRenderer(position);
+    }
+
+    private void SetBouncyness(bool isBouncy)
+    {
+        GetComponent<Collider>().material = PhysicMaterialSelector.instance.GetPhysicMaterial(isBouncy);
     }
 
     private void CalculatePhysicsStateParabolic()
@@ -248,11 +259,11 @@ public class Projectile : MonoBehaviour
     private Quaternion GetOrbitRotation(float time)
     {
         //convert velocity to deg per s using range
-        //deduce total path orbited
-        //calculate position for time - half of lifetime
-
         float degPerSecond = _data.velocity / (2 * Mathf.PI / 360f * _data.orbitalTrajectory.range);
+        //deduce total path orbited
         float timeSpent = (time - firedTime);
+        //calculate position for time - half of lifetime as the starting position
+        //that way, the path is always symmetrical relative to the aimed direction
         float degRotation = degPerSecond * (timeSpent - _data.lifetime / 2);
 
         //Get start orbit
@@ -276,75 +287,25 @@ public class Projectile : MonoBehaviour
 
     private void PrepareForNextStateOrbit(float time, float nextTime, bool firstFrame)
     {
-        Vector3 startPos = _rigidbody.position;
-
-        if (firstFrame == false && Vector3.Distance(predictedNextFramePos, startPos) > 0.01f)
-            Debug.Log("WTF");
-
+        //Get next position
         Vector3 nextPosition;
         GetLocalOrbitPos(nextTime, out nextPosition);
         nextPosition += _parent.GetPosition();
 
-        float fdt = Time.fixedDeltaTime;
-
-        float halfTime = (time + nextTime) / 2f;
-        Vector3 halfPosition;
-        GetLocalOrbitPos(halfTime, out halfPosition);
-        halfPosition += _parent.GetPosition();
-
-        Vector3 dp2 = nextPosition - startPos;
-        Vector3 dp1 = halfPosition - startPos;
-
-        Vector3 force = (dp2 - 2 * dp1) * 4 / (fdt * fdt);
-        Vector3 v0 = (dp2 / fdt) - (force * fdt / 2f);
-
-        Vector3 deltaPosPredicted = PhysicsTools.GetMovement(v0, force, fdt);
-        if (Vector3.Distance(deltaPosPredicted, dp2) > 0.001f)
-            Debug.Log("position prediction error: " + Vector3.Distance(deltaPosPredicted, dp2));
-
-        predictedNextFramePos = deltaPosPredicted + startPos;
-
-        Vector3 deltaHPosPredicted = PhysicsTools.GetMovement(v0, force, fdt / 2f);
-        if (Vector3.Distance(deltaHPosPredicted, dp1) > 0.001f)
-            Debug.Log("position prediction error: " + Vector3.Distance(deltaHPosPredicted, dp1));
-
-        //drawing the startpos, midpos, endpos triangle
-        Debug.DrawLine(startPos, startPos + dp2, Color.magenta, Time.fixedDeltaTime * 2);
-        Debug.DrawLine(startPos, startPos + dp1, Color.red, Time.fixedDeltaTime * 2);
-        Debug.DrawLine(startPos + dp2, startPos + dp1, Color.red, Time.fixedDeltaTime * 2);
-        //drawing v0 and force
-        Debug.DrawLine(startPos, startPos + force, Color.gray, Time.fixedDeltaTime * 2);
-        Debug.DrawLine(startPos, startPos + v0, Color.blue, Time.fixedDeltaTime * 2);
-        //drawing the parabola arc
-        {
-            Vector3 pos = startPos;
-            Vector3 vel = v0;
-            for (int i = 0; i < 10; i++)
-            {
-                Vector3 offset = PhysicsTools.GetMovementUpdateVelocity(ref vel, force, Time.fixedDeltaTime / 10f);
-                Debug.DrawLine(pos, pos + offset, Color.green, Time.fixedDeltaTime * 2);
-                pos += offset;
-            }
-        }
-
-        // Old version
-        // Vector3 deltaPosition = nextPosition - _rigidbody.position;
-        // Vector3 velocity = deltaPosition / t;
-        // SetPhysicsState(_rigidbody.position, velocity, time);
-
-        //Applying results
-        SetPhysicsState(startPos, v0, time);
-        _rigidbody.AddForce(force / 2f, ForceMode.Acceleration);
+        //Find velocity to reach next position by next frame
+        Vector3 deltaPosition = nextPosition - _rigidbody.position;
+        Vector3 velocity = deltaPosition / Time.fixedDeltaTime;
+        SetPhysicsState(_rigidbody.position, velocity, time);
     }
 
     private void FixedUpdate()
     {
-        //TODO: don't do this if currently catching up
         if (_deathTime < Time.fixedTime)
         {
             Kill(DeathCause.Timeout, _deathTime);
             return;
         }
+
         if (transform.position.sqrMagnitude > 10000 * 10000)
         {
             Kill(DeathCause.Timeout, Time.fixedTime);
@@ -360,9 +321,7 @@ public class Projectile : MonoBehaviour
 
     private void OnCollisionEnter(Collision other)
     {
-        //Update trail renderer
         Vector3 contactPoint = other.GetContact(0).point;
-        AddPositionToRenderer(contactPoint);
         // Approximate the time of the collision,
         // taking in account the possibility of currently being faster due to catching up
         float timeOfCollision = lastTime +
@@ -371,7 +330,6 @@ public class Projectile : MonoBehaviour
         if (timeOfCollision > _deathTime)
         {
             Kill(DeathCause.Timeout, _deathTime);
-            //TODO set position to deathtime
             return;
         }
 
@@ -381,14 +339,13 @@ public class Projectile : MonoBehaviour
         {
             affectable.Apply(_effect, timeOfCollision, -other.relativeVelocity, contactPoint);
             Kill(DeathCause.Contact, timeOfCollision);
-            //TODO: set death position, due to rigidbody position probably having bounced back
         }
         else if (_bounces > 0)
         {
             _bounces--;
-            //SetPhysicsState(_rigidbody.position,
-            //    Vector3.Reflect(-other.relativeVelocity, other.contacts[0].normal),
-            //    timeOfCollision);
+            if (_bounces == 0)
+                SetBouncyness(false);
+            AddPositionToRenderer(contactPoint);
         }
         else
             Kill(DeathCause.Contact, timeOfCollision);
