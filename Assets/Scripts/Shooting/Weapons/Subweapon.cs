@@ -69,6 +69,7 @@ public class Subweapon : MultiUpdateObject, IWeapon
     public Vector3 GetPosition()
     {
         //TODO use projectile and time argument + transform.localposition ?
+        //Probably will be required for rotation too
         return transform.position;
     }
 

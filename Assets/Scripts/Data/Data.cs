@@ -186,7 +186,7 @@ namespace Data
         public float timePerBullet;//time for each ammunition reloaded. allows partial reload
 
         [Range(0f, 60f)]
-        public float timePerEmptyClip;//if resource goes below 0, time before reload or gain works //TODO clarify
+        public float timePerEmptyClip;//if resource goes below 0, time before reload or gain works
 
         [Range(0, 100)]
         public int maxProjectiles;//max number of projectiles in existance, 0 if no limit, must be 1 for some systems to work
@@ -230,6 +230,7 @@ namespace Data
 
         //health based effects
         //TODO damage information (enemy multiplier, friendly-fire multiplier, shield multiplier)
+        // should be part of Effect
         public Effect damage;
         //shielf based effect
         public Effect shield;
